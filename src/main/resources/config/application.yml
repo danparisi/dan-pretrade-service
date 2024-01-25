@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: dan-pretrade-service
+  datasource:
+    url: jdbc:mariadb://mariadb:3306/dan_pretrade
+    username: root
+    password: LNqRhw5m1w
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
