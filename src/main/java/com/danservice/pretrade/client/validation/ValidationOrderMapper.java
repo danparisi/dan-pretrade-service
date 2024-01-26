@@ -6,6 +6,6 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface ValidationOrderMapper {
 
-    ValidationOrderRequestDTO map(CreateOrderDTO orderEntity);
+    OrderValidationRequestDTO map(CreateOrderDTO orderEntity);
 
 }

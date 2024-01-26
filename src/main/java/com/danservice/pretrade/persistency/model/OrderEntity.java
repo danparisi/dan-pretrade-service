@@ -1,6 +1,6 @@
 package com.danservice.pretrade.persistency.model;
 
-import com.danservice.pretrade.api.v1.dto.OrderType;
+import com.danservice.pretrade.domain.OrderType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

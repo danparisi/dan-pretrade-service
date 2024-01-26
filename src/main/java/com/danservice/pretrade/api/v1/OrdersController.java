@@ -4,7 +4,7 @@ import com.danservice.pretrade.api.v1.dto.BaseOrderResponseDTO;
 import com.danservice.pretrade.api.v1.dto.CreateOrderDTO;
 import com.danservice.pretrade.api.v1.dto.CreateOrderResponseDTO;
 import com.danservice.pretrade.api.v1.dto.OrderDTO;
-import com.danservice.pretrade.service.OrderValidationException;
+import com.danservice.pretrade.exception.OrderValidationException;
 import com.danservice.pretrade.service.OrdersService;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
@@ -47,12 +47,6 @@ public class OrdersController {
                 .body(getExceptionBody(exception.getErrors()));
     }
 
-    private static BaseOrderResponseDTO getExceptionBody(List<String> exception) {
-        return BaseOrderResponseDTO.builder()
-                .result(ERROR)
-                .errors(exception).build();
-    }
-
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderDTO> get(@NotNull @PathVariable UUID orderId) {
         log.info("Returning order [{}]", orderId);
@@ -82,4 +76,9 @@ public class OrdersController {
         return status(CREATED).body(response);
     }
 
+    private static BaseOrderResponseDTO getExceptionBody(List<String> exception) {
+        return BaseOrderResponseDTO.builder()
+                .result(ERROR)
+                .errors(exception).build();
+    }
 }

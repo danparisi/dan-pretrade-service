@@ -8,6 +8,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface ValidationClient {
 
     @PostMapping("v1/orders/validate")
-    ValidationOrderResponseDTO validateOrder(@RequestBody ValidationOrderRequestDTO validationOrderRequestDTO);
+    OrderValidationResponseDTO validateOrder(@RequestBody OrderValidationRequestDTO orderValidationRequestDTO);
 
 }

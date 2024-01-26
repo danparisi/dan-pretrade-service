@@ -1,4 +1,4 @@
-package com.danservice.pretrade.service;
+package com.danservice.pretrade.exception;
 
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;

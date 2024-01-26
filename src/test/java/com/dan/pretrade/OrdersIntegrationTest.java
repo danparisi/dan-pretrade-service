@@ -4,7 +4,7 @@ import com.danservice.pretrade.Application;
 import com.danservice.pretrade.api.v1.dto.BaseOrderDTO;
 import com.danservice.pretrade.api.v1.dto.CreateOrderResponseDTO;
 import com.danservice.pretrade.api.v1.dto.OrderDTO;
-import com.danservice.pretrade.client.validation.ValidationOrderResponseDTO;
+import com.danservice.pretrade.client.validation.OrderValidationResponseDTO;
 import com.danservice.pretrade.persistency.model.OrderEntity;
 import com.danservice.pretrade.persistency.repository.OrderRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,9 +40,9 @@ import static com.dan.pretrade.OrdersIntegrationTest.LoadBalancerTestConfigurati
 import static com.danservice.pretrade.api.v1.OrdersController.BASE_ENDPOINT_ORDERS;
 import static com.danservice.pretrade.api.v1.dto.OrderDTO.OrderDTOBuilder;
 import static com.danservice.pretrade.api.v1.dto.OrderDTO.builder;
-import static com.danservice.pretrade.api.v1.dto.OrderType.LIMIT;
 import static com.danservice.pretrade.api.v1.dto.ResultType.ERROR;
 import static com.danservice.pretrade.api.v1.dto.ResultType.SUCCESS;
+import static com.danservice.pretrade.domain.OrderType.LIMIT;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static java.lang.String.format;
 import static java.math.BigDecimal.ZERO;
@@ -252,7 +252,7 @@ class OrdersIntegrationTest {
                                 .withStatus(OK.value())
                                 .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
                                 .withBody(objectMapper
-                                        .writeValueAsString(ValidationOrderResponseDTO.builder()
+                                        .writeValueAsString(OrderValidationResponseDTO.builder()
                                                 .valid(valid)
                                                 .errors(errors).build()))));
     }

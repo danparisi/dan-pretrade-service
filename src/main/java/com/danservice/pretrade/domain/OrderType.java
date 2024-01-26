@@ -1,4 +1,4 @@
-package com.danservice.pretrade.api.v1.dto;
+package com.danservice.pretrade.domain;
 
 public enum OrderType {
     LIMIT,

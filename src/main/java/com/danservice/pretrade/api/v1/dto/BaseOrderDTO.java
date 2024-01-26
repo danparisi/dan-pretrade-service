@@ -1,5 +1,6 @@
 package com.danservice.pretrade.api.v1.dto;
 
+import com.danservice.pretrade.domain.OrderType;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
