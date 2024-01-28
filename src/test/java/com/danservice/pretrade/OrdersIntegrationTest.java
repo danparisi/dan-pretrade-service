@@ -1,6 +1,5 @@
-package com.dan.pretrade;
+package com.danservice.pretrade;
 
-import com.danservice.pretrade.Application;
 import com.danservice.pretrade.api.v1.dto.BaseOrderDTO;
 import com.danservice.pretrade.api.v1.dto.CreateOrderResponseDTO;
 import com.danservice.pretrade.api.v1.dto.OrderDTO;
@@ -10,6 +9,8 @@ import com.danservice.pretrade.persistency.repository.OrderRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import lombok.SneakyThrows;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.jeasy.random.EasyRandom;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -26,9 +28,15 @@ import org.springframework.cloud.loadbalancer.core.ServiceInstanceListSupplier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.test.EmbeddedKafkaBroker;
+import org.springframework.kafka.test.context.EmbeddedKafka;
 import reactor.core.publisher.Flux;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,7 +44,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.dan.pretrade.OrdersIntegrationTest.LoadBalancerTestConfiguration;
+import static com.danservice.pretrade.OrdersIntegrationTest.LoadBalancerTestConfiguration;
 import static com.danservice.pretrade.api.v1.OrdersController.BASE_ENDPOINT_ORDERS;
 import static com.danservice.pretrade.api.v1.dto.OrderDTO.OrderDTOBuilder;
 import static com.danservice.pretrade.api.v1.dto.OrderDTO.builder;
@@ -47,26 +55,36 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static java.lang.String.format;
 import static java.math.BigDecimal.ZERO;
 import static java.math.RoundingMode.UP;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.util.Arrays.stream;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.UUID.randomUUID;
 import static java.util.function.Function.identity;
+import static org.apache.commons.collections4.IterableUtils.toList;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.kafka.clients.consumer.ConsumerConfig.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.HttpStatus.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.kafka.support.serializer.JsonDeserializer.TRUSTED_PACKAGES;
+import static org.springframework.kafka.test.utils.KafkaTestUtils.consumerProps;
+import static org.springframework.kafka.test.utils.KafkaTestUtils.getRecords;
 import static reactor.core.publisher.Flux.just;
 
+@EmbeddedKafka(
+        partitions = 1, topics = "${dan.topic.client-order}"/*, brokerProperties = {"listeners=PLAINTEXT://localhost:9092", "port=9092"}*/)
 @SpringBootTest(classes = {Application.class, LoadBalancerTestConfiguration.class}, webEnvironment = RANDOM_PORT)
 class OrdersIntegrationTest {
     private static final EasyRandom EASY_RANDOM = new EasyRandom();
     private static final String ENDPOINT_ALL_ORDERS = BASE_ENDPOINT_ORDERS;
     private static final String ENDPOINT_ORDER_ID = BASE_ENDPOINT_ORDERS + "/{orderId}";
 
+    @Value("${dan.topic.client-order}")
+    private String clientOrdersTopic;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
@@ -75,6 +93,8 @@ class OrdersIntegrationTest {
     private OrderRepository orderRepository;
     @Autowired
     private TestRestTemplate testRestTemplate;
+    @Autowired
+    private EmbeddedKafkaBroker embeddedKafkaBroker;
 
     @BeforeEach
     void beforeEach() {
@@ -136,6 +156,27 @@ class OrdersIntegrationTest {
         assertEquals(CREATED, result.getStatusCode());
         verifyOrderValidationCall(newOrderDTO);
         verifyCreateOrderResponse(newOrderDTO, result);
+
+        List<ConsumerRecord<String, OrderDTO>> consumerRecords = consumeFromKAfkaTopic();
+        assertEquals(1, consumerRecords.size());
+        assertEquals(result.getBody().getOrder(), consumerRecords.get(0).value());
+    }
+
+    private List<ConsumerRecord<String, OrderDTO>> consumeFromKAfkaTopic() {
+        Map<String, Object> consumerProps = consumerProps("test-group", "true", embeddedKafkaBroker);
+        consumerProps.put(TRUSTED_PACKAGES, "com.danservice.*");
+        consumerProps.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
+        consumerProps.put(KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        consumerProps.put(VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        ConsumerFactory<String, OrderDTO> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
+        org.apache.kafka.clients.consumer.Consumer<String, OrderDTO> consumer = cf.createConsumer();
+
+        embeddedKafkaBroker
+                .consumeFromAnEmbeddedTopic(consumer, clientOrdersTopic);
+
+        return toList(
+                getRecords(consumer, Duration.of(5, SECONDS))
+                        .records(clientOrdersTopic));
     }
 
     @Test

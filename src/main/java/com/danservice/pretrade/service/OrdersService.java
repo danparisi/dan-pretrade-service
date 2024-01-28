@@ -9,6 +9,8 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -23,18 +25,22 @@ import static java.util.stream.Collectors.toSet;
 @Transactional
 @RequiredArgsConstructor
 public class OrdersService {
+    @Value("${dan.topic.client-order}")
+    private String clientOrdersTopic;
     private final OrderMapper orderMapper;
     private final OrderRepository orderRepository;
     private final ValidationService validationService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public OrderDTO add(@NonNull @Valid CreateOrderDTO orderDTO) {
-        validationService.validateForCreate(orderDTO);
+    public OrderDTO add(@NonNull @Valid CreateOrderDTO createOrderDTO) {
+        validationService.validateForCreate(createOrderDTO);
 
-        final OrderEntity storedOrder = orderRepository
-                .save(orderMapper
-                        .map(orderDTO));
+        final OrderEntity storedOrderEntity = orderRepository.save(orderMapper.map(createOrderDTO));
+        final OrderDTO storedOrderDTO = orderMapper.map(storedOrderEntity);
 
-        return orderMapper.map(storedOrder);
+        kafkaTemplate.send(clientOrdersTopic, storedOrderDTO.getId().toString(), storedOrderDTO);
+
+        return storedOrderDTO;
     }
 
     public Optional<OrderDTO> find(@NonNull UUID orderId) {
