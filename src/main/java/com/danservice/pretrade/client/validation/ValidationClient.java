@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient("dan-validation-service")
 public interface ValidationClient {
 
-    @PostMapping("v1/orders/validate")
+    @PostMapping("orders/v1/validate")
     OrderValidationResponseDTO validateOrder(@RequestBody OrderValidationRequestDTO orderValidationRequestDTO);
 
 }

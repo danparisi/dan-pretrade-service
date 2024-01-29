@@ -288,7 +288,7 @@ class OrdersIntegrationTest {
     @SneakyThrows
     private void stubOrderValidationCall(boolean valid, List<String> errors) {
         wireMockServer
-                .stubFor(post("/v1/orders/validate")
+                .stubFor(post("/orders/v1/validate")
                         .willReturn(aResponse()
                                 .withStatus(OK.value())
                                 .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
@@ -300,7 +300,7 @@ class OrdersIntegrationTest {
 
     private void verifyOrderValidationCall(BaseOrderDTO orderDTO) {
         wireMockServer.
-                verify(postRequestedFor(urlEqualTo("/v1/orders/validate"))
+                verify(postRequestedFor(urlEqualTo("/orders/v1/validate"))
                         .withHeader(CONTENT_TYPE, equalTo(APPLICATION_JSON_VALUE))
                         .withRequestBody(matchingJsonPath("$.type", equalTo(orderDTO.getType().name())))
                         .withRequestBody(matchingJsonPath("$.instrument", equalTo(orderDTO.getInstrument())))
@@ -311,7 +311,7 @@ class OrdersIntegrationTest {
 
     private void verifyOrderValidationNotCalled() {
         wireMockServer.
-                verify(0, postRequestedFor(urlEqualTo("/v1/orders/")));
+                verify(0, postRequestedFor(urlEqualTo("/orders/v1/")));
     }
 
     private static Stream<Arguments> invalidOrderDTOGenerator() {

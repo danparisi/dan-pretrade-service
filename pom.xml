@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.danservice</groupId>
         <artifactId>dan-service-starter-parent</artifactId>
-        <version>0.0.20</version>
+        <version>0.0.21</version>
     </parent>
 
     <artifactId>pretrade</artifactId>
@@ -23,7 +23,7 @@
         <dependency>
             <groupId>com.danservice</groupId>
             <artifactId>dan-service-tech-starter</artifactId>
-            <version>0.0.15</version>
+            <version>0.0.16</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

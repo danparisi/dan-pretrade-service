@@ -29,7 +29,7 @@ import static org.springframework.http.ResponseEntity.*;
 @RequiredArgsConstructor
 @RequestMapping(BASE_ENDPOINT_ORDERS)
 public class OrdersController {
-    public static final String BASE_ENDPOINT_ORDERS = "/v1/orders";
+    public static final String BASE_ENDPOINT_ORDERS = "/orders/v1";
 
     private final OrdersService ordersService;
 
