@@ -75,8 +75,7 @@ import static org.springframework.kafka.test.utils.KafkaTestUtils.consumerProps;
 import static org.springframework.kafka.test.utils.KafkaTestUtils.getRecords;
 import static reactor.core.publisher.Flux.just;
 
-@EmbeddedKafka(
-        partitions = 1, topics = "${dan.topic.client-order}"/*, brokerProperties = {"listeners=PLAINTEXT://localhost:9092", "port=9092"}*/)
+@EmbeddedKafka(partitions = 1, topics = "${dan.topic.client-order}")
 @SpringBootTest(classes = {Application.class, LoadBalancerTestConfiguration.class}, webEnvironment = RANDOM_PORT)
 class OrdersIntegrationTest {
     private static final EasyRandom EASY_RANDOM = new EasyRandom();
@@ -162,23 +161,6 @@ class OrdersIntegrationTest {
         assertEquals(result.getBody().getOrder(), consumerRecords.get(0).value());
     }
 
-    private List<ConsumerRecord<String, OrderDTO>> consumeFromKAfkaTopic() {
-        Map<String, Object> consumerProps = consumerProps("test-group", "true", embeddedKafkaBroker);
-        consumerProps.put(TRUSTED_PACKAGES, "com.danservice.*");
-        consumerProps.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
-        consumerProps.put(KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        consumerProps.put(VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        ConsumerFactory<String, OrderDTO> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
-        org.apache.kafka.clients.consumer.Consumer<String, OrderDTO> consumer = cf.createConsumer();
-
-        embeddedKafkaBroker
-                .consumeFromAnEmbeddedTopic(consumer, clientOrdersTopic);
-
-        return toList(
-                getRecords(consumer, Duration.of(5, SECONDS))
-                        .records(clientOrdersTopic));
-    }
-
     @Test
     @SneakyThrows
     void shouldNotAddNewOrderIfValidationCallFails() {
@@ -207,6 +189,23 @@ class OrdersIntegrationTest {
 
         verifyOrderValidationNotCalled();
         assertEquals(BAD_REQUEST, result.getStatusCode());
+    }
+
+    private List<ConsumerRecord<String, OrderDTO>> consumeFromKAfkaTopic() {
+        Map<String, Object> consumerProps = consumerProps("test-group", "true", embeddedKafkaBroker);
+        consumerProps.put(TRUSTED_PACKAGES, "com.danservice.*");
+        consumerProps.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
+        consumerProps.put(KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        consumerProps.put(VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        ConsumerFactory<String, OrderDTO> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
+        org.apache.kafka.clients.consumer.Consumer<String, OrderDTO> consumer = cf.createConsumer();
+
+        embeddedKafkaBroker
+                .consumeFromAnEmbeddedTopic(consumer, clientOrdersTopic);
+
+        return toList(
+                getRecords(consumer, Duration.of(5, SECONDS))
+                        .records(clientOrdersTopic));
     }
 
     private static void assertBaseOrdersEquals(OrderDTO expected, OrderDTO actual) {

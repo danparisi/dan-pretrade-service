@@ -13,9 +13,11 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MariaDBDialect
   kafka:
-    consumer:
-      properties:
-        spring.json.trusted.packages: com.danservice.*
+    producer:
+      retries: 3
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 dan:
   topic:
