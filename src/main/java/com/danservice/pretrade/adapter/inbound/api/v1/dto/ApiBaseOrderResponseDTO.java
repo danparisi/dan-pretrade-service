@@ -1,4 +1,4 @@
-package com.danservice.pretrade.api.v1.dto;
+package com.danservice.pretrade.adapter.inbound.api.v1.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -10,10 +10,10 @@ import java.util.List;
 @Data
 @RequiredArgsConstructor
 @SuperBuilder(toBuilder = true)
-public class BaseOrderResponseDTO {
+public class ApiBaseOrderResponseDTO {
 
     @NotNull
-    private ResultType result;
+    private ApiResultType result;
 
     private List<String> errors;
 

@@ -1,4 +1,4 @@
-package com.danservice.pretrade.api.v1.dto;
+package com.danservice.pretrade.adapter.inbound.api.v1.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -18,8 +18,8 @@ import static com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseS
 @JsonNaming(SnakeCaseStrategy.class)
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CreateOrderResponseDTO extends BaseOrderResponseDTO {
+public class ApiCreateOrderResponseDTO extends ApiBaseOrderResponseDTO {
 
-    private OrderDTO order;
+    private ApiOrderDTO order;
 
 }

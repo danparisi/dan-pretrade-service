@@ -1,9 +1,9 @@
-package com.danservice.pretrade.api.v1;
+package com.danservice.pretrade.adapter.inbound.api.v1;
 
-import com.danservice.pretrade.api.v1.dto.BaseOrderResponseDTO;
-import com.danservice.pretrade.api.v1.dto.CreateOrderDTO;
-import com.danservice.pretrade.api.v1.dto.CreateOrderResponseDTO;
-import com.danservice.pretrade.api.v1.dto.OrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiBaseOrderResponseDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiCreateOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiCreateOrderResponseDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO;
 import com.danservice.pretrade.exception.OrderValidationException;
 import com.danservice.pretrade.service.OrdersService;
 import jakarta.validation.Valid;
@@ -18,9 +18,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-import static com.danservice.pretrade.api.v1.OrdersController.BASE_ENDPOINT_ORDERS;
-import static com.danservice.pretrade.api.v1.dto.ResultType.ERROR;
-import static com.danservice.pretrade.api.v1.dto.ResultType.SUCCESS;
+import static com.danservice.pretrade.adapter.inbound.api.v1.OrdersController.BASE_ENDPOINT_ORDERS;
+import static com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiResultType.ERROR;
+import static com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiResultType.SUCCESS;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.ResponseEntity.*;
 
@@ -34,21 +34,21 @@ public class OrdersController {
     private final OrdersService ordersService;
 
     @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<BaseOrderResponseDTO> exceptionHandler(ValidationException exception) {
+    public ResponseEntity<ApiBaseOrderResponseDTO> exceptionHandler(ValidationException exception) {
         return ResponseEntity
                 .badRequest()
                 .body(getExceptionBody(List.of(exception.getMessage())));
     }
 
     @ExceptionHandler(OrderValidationException.class)
-    public ResponseEntity<BaseOrderResponseDTO> exceptionHandler(OrderValidationException exception) {
+    public ResponseEntity<ApiBaseOrderResponseDTO> exceptionHandler(OrderValidationException exception) {
         return ResponseEntity
                 .badRequest()
                 .body(getExceptionBody(exception.getErrors()));
     }
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<OrderDTO> get(@NotNull @PathVariable UUID orderId) {
+    public ResponseEntity<ApiOrderDTO> get(@NotNull @PathVariable UUID orderId) {
         log.info("Returning order [{}]", orderId);
 
         return ordersService
@@ -58,26 +58,26 @@ public class OrdersController {
     }
 
     @GetMapping
-    public ResponseEntity<Collection<OrderDTO>> getAll() {
+    public ResponseEntity<Collection<ApiOrderDTO>> getAll() {
         log.info("Returning all orders");
 
         return ok(ordersService.findAll());
     }
 
     @PostMapping
-    public ResponseEntity<CreateOrderResponseDTO> add(@RequestBody @Valid CreateOrderDTO orderDTO) {
+    public ResponseEntity<ApiCreateOrderResponseDTO> add(@RequestBody @Valid ApiCreateOrderDTO orderDTO) {
         log.info("Adding order [{}]", orderDTO);
-        OrderDTO newOrder = ordersService.add(orderDTO);
+        ApiOrderDTO newOrder = ordersService.add(orderDTO);
 
-        CreateOrderResponseDTO response = CreateOrderResponseDTO.builder()
+        ApiCreateOrderResponseDTO response = ApiCreateOrderResponseDTO.builder()
                 .order(newOrder)
                 .result(SUCCESS).build();
 
         return status(CREATED).body(response);
     }
 
-    private static BaseOrderResponseDTO getExceptionBody(List<String> exception) {
-        return BaseOrderResponseDTO.builder()
+    private static ApiBaseOrderResponseDTO getExceptionBody(List<String> exception) {
+        return ApiBaseOrderResponseDTO.builder()
                 .result(ERROR)
                 .errors(exception).build();
     }

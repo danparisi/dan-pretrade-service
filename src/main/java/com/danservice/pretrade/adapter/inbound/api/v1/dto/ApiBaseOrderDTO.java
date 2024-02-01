@@ -1,4 +1,4 @@
-package com.danservice.pretrade.api.v1.dto;
+package com.danservice.pretrade.adapter.inbound.api.v1.dto;
 
 import com.danservice.pretrade.domain.OrderType;
 import jakarta.validation.constraints.*;
@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @Data
 @RequiredArgsConstructor
 @SuperBuilder(toBuilder = true)
-public class BaseOrderDTO {
+public class ApiBaseOrderDTO {
 
     @NotNull
     private OrderType type;

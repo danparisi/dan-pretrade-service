@@ -1,6 +1,6 @@
 package com.danservice.pretrade.service;
 
-import com.danservice.pretrade.api.v1.dto.CreateOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiCreateOrderDTO;
 import com.danservice.pretrade.client.validation.ValidationClient;
 import com.danservice.pretrade.client.validation.ValidationOrderMapper;
 import com.danservice.pretrade.exception.OrderValidationException;
@@ -15,7 +15,7 @@ public class ValidationService {
     private final ValidationClient validationClient;
     private final ValidationOrderMapper validationOrderMapper;
 
-    public void validateForCreate(CreateOrderDTO orderDTO) {
+    public void validateForCreate(ApiCreateOrderDTO orderDTO) {
         var response = validationClient.validateOrder(validationOrderMapper.map(orderDTO));
 
         if (!response.isValid()) {

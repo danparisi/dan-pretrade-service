@@ -1,4 +1,4 @@
-package com.danservice.pretrade.persistency.model;
+package com.danservice.pretrade.model;
 
 import com.danservice.pretrade.domain.OrderType;
 import jakarta.persistence.*;

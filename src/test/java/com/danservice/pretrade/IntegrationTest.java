@@ -1,11 +1,13 @@
 package com.danservice.pretrade;
 
-import com.danservice.pretrade.api.v1.dto.BaseOrderDTO;
-import com.danservice.pretrade.api.v1.dto.CreateOrderResponseDTO;
-import com.danservice.pretrade.api.v1.dto.OrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiBaseOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiCreateOrderResponseDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO.ApiOrderDTOBuilder;
+import com.danservice.pretrade.adapter.outbound.kafka.v1.dto.KafkaClientOrderDTO;
+import com.danservice.pretrade.adapter.repository.OrderRepository;
 import com.danservice.pretrade.client.validation.OrderValidationResponseDTO;
-import com.danservice.pretrade.persistency.model.OrderEntity;
-import com.danservice.pretrade.persistency.repository.OrderRepository;
+import com.danservice.pretrade.model.OrderEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import lombok.SneakyThrows;
@@ -44,12 +46,11 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.danservice.pretrade.OrdersIntegrationTest.LoadBalancerTestConfiguration;
-import static com.danservice.pretrade.api.v1.OrdersController.BASE_ENDPOINT_ORDERS;
-import static com.danservice.pretrade.api.v1.dto.OrderDTO.OrderDTOBuilder;
-import static com.danservice.pretrade.api.v1.dto.OrderDTO.builder;
-import static com.danservice.pretrade.api.v1.dto.ResultType.ERROR;
-import static com.danservice.pretrade.api.v1.dto.ResultType.SUCCESS;
+import static com.danservice.pretrade.IntegrationTest.LoadBalancerTestConfiguration;
+import static com.danservice.pretrade.adapter.inbound.api.v1.OrdersController.BASE_ENDPOINT_ORDERS;
+import static com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO.builder;
+import static com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiResultType.ERROR;
+import static com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiResultType.SUCCESS;
 import static com.danservice.pretrade.domain.OrderType.LIMIT;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static java.lang.String.format;
@@ -65,6 +66,7 @@ import static org.apache.commons.collections4.IterableUtils.toList;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
@@ -77,7 +79,7 @@ import static reactor.core.publisher.Flux.just;
 
 @EmbeddedKafka(partitions = 1, topics = "${dan.topic.client-order}")
 @SpringBootTest(classes = {Application.class, LoadBalancerTestConfiguration.class}, webEnvironment = RANDOM_PORT)
-class OrdersIntegrationTest {
+class IntegrationTest {
     private static final EasyRandom EASY_RANDOM = new EasyRandom();
     private static final String ENDPOINT_ALL_ORDERS = BASE_ENDPOINT_ORDERS;
     private static final String ENDPOINT_ORDER_ID = BASE_ENDPOINT_ORDERS + "/{orderId}";
@@ -107,10 +109,10 @@ class OrdersIntegrationTest {
         OrderEntity order = storeNewOrder();
         UUID orderId = order.getId();
 
-        ResponseEntity<OrderDTO> response = testRestTemplate
-                .getForEntity(ENDPOINT_ORDER_ID, OrderDTO.class, orderId);
+        ResponseEntity<ApiOrderDTO> response = testRestTemplate
+                .getForEntity(ENDPOINT_ORDER_ID, ApiOrderDTO.class, orderId);
 
-        OrderDTO actual = response.getBody();
+        ApiOrderDTO actual = response.getBody();
         assertNotNull(actual);
         assertEquals(OK, response.getStatusCode());
         verifyGetOrderResponse(actual, orderId);
@@ -123,12 +125,12 @@ class OrdersIntegrationTest {
         OrderEntity order2 = storeNewOrder();
         OrderEntity order3 = storeNewOrder();
 
-        ResponseEntity<OrderDTO[]> response = testRestTemplate
-                .getForEntity(ENDPOINT_ALL_ORDERS, OrderDTO[].class);
+        ResponseEntity<ApiOrderDTO[]> response = testRestTemplate
+                .getForEntity(ENDPOINT_ALL_ORDERS, ApiOrderDTO[].class);
 
         assertEquals(OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        Map<UUID, OrderDTO> orders = stream(response.getBody()).collect(Collectors.toMap(OrderDTO::getId, identity()));
+        Map<UUID, ApiOrderDTO> orders = stream(response.getBody()).collect(Collectors.toMap(ApiOrderDTO::getId, identity()));
         assertEquals(3, orders.size());
         assertBaseOrdersEquals(order1, orders.get(order1.getId()));
         assertBaseOrdersEquals(order2, orders.get(order2.getId()));
@@ -138,8 +140,8 @@ class OrdersIntegrationTest {
     @Test
     @SneakyThrows
     void shouldReturnNoContentIfOrderNotFound() {
-        ResponseEntity<OrderDTO> response = testRestTemplate
-                .getForEntity(ENDPOINT_ORDER_ID, OrderDTO.class, randomUUID());
+        ResponseEntity<ApiOrderDTO> response = testRestTemplate
+                .getForEntity(ENDPOINT_ORDER_ID, ApiOrderDTO.class, randomUUID());
 
         assertEquals(NO_CONTENT, response.getStatusCode());
     }
@@ -148,31 +150,30 @@ class OrdersIntegrationTest {
     @SneakyThrows
     void shouldAddNewOrder() {
         stubValidOrderValidationCall();
-        OrderDTO newOrderDTO = newCreateOrderDTO();
-        ResponseEntity<CreateOrderResponseDTO> result = testRestTemplate
-                .postForEntity(BASE_ENDPOINT_ORDERS, newOrderDTO, CreateOrderResponseDTO.class);
+        ApiOrderDTO newOrderDTO = newCreateOrderDTO();
+
+        ResponseEntity<ApiCreateOrderResponseDTO> result = testRestTemplate
+                .postForEntity(BASE_ENDPOINT_ORDERS, newOrderDTO, ApiCreateOrderResponseDTO.class);
 
         assertEquals(CREATED, result.getStatusCode());
+        assertNotNull(result.getBody());
         verifyOrderValidationCall(newOrderDTO);
+        verifyKafkaClienteOrderProduced(result);
         verifyCreateOrderResponse(newOrderDTO, result);
-
-        List<ConsumerRecord<String, OrderDTO>> consumerRecords = consumeFromKAfkaTopic();
-        assertEquals(1, consumerRecords.size());
-        assertEquals(result.getBody().getOrder(), consumerRecords.get(0).value());
     }
 
     @Test
     @SneakyThrows
     void shouldNotAddNewOrderIfValidationCallFails() {
         List<String> errorList = singletonList(randomAlphabetic(50));
-        OrderDTO newOrderDTO = newCreateOrderDTO();
+        ApiOrderDTO newOrderDTO = newCreateOrderDTO();
         stubInvalidOrderValidationCall(errorList);
 
-        ResponseEntity<CreateOrderResponseDTO> result = testRestTemplate
-                .postForEntity(BASE_ENDPOINT_ORDERS, newOrderDTO, CreateOrderResponseDTO.class);
+        ResponseEntity<ApiCreateOrderResponseDTO> result = testRestTemplate
+                .postForEntity(BASE_ENDPOINT_ORDERS, newOrderDTO, ApiCreateOrderResponseDTO.class);
 
         assertEquals(BAD_REQUEST, result.getStatusCode());
-        CreateOrderResponseDTO responseBody = result.getBody();
+        ApiCreateOrderResponseDTO responseBody = result.getBody();
         assertNotNull(responseBody);
         assertNull(responseBody.getOrder());
         verifyOrderValidationCall(newOrderDTO);
@@ -183,7 +184,7 @@ class OrdersIntegrationTest {
     @SneakyThrows
     @ParameterizedTest
     @MethodSource("invalidOrderDTOGenerator")
-    void shouldNotAddNewOrderIfInvalid(OrderDTO invalidOrderDTO) {
+    void shouldNotAddNewOrderIfInvalid(ApiOrderDTO invalidOrderDTO) {
         ResponseEntity<Object> result = testRestTemplate
                 .postForEntity(BASE_ENDPOINT_ORDERS, invalidOrderDTO, Object.class);
 
@@ -191,14 +192,22 @@ class OrdersIntegrationTest {
         assertEquals(BAD_REQUEST, result.getStatusCode());
     }
 
-    private List<ConsumerRecord<String, OrderDTO>> consumeFromKAfkaTopic() {
+    private void verifyKafkaClienteOrderProduced(ResponseEntity<ApiCreateOrderResponseDTO> result) {
+        List<ConsumerRecord<String, KafkaClientOrderDTO>> consumerRecords = consumeFromKafkaTopic();
+        assertEquals(1, consumerRecords.size());
+        assertThat(consumerRecords.get(0).value())
+                .usingRecursiveComparison()
+                .isEqualTo(result.getBody().getOrder());
+    }
+
+    private List<ConsumerRecord<String, KafkaClientOrderDTO>> consumeFromKafkaTopic() {
         Map<String, Object> consumerProps = consumerProps("test-group", "true", embeddedKafkaBroker);
         consumerProps.put(TRUSTED_PACKAGES, "com.danservice.*");
         consumerProps.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         consumerProps.put(VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        ConsumerFactory<String, OrderDTO> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
-        org.apache.kafka.clients.consumer.Consumer<String, OrderDTO> consumer = cf.createConsumer();
+        ConsumerFactory<String, KafkaClientOrderDTO> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
+        org.apache.kafka.clients.consumer.Consumer<String, KafkaClientOrderDTO> consumer = cf.createConsumer();
 
         embeddedKafkaBroker
                 .consumeFromAnEmbeddedTopic(consumer, clientOrdersTopic);
@@ -208,35 +217,35 @@ class OrdersIntegrationTest {
                         .records(clientOrdersTopic));
     }
 
-    private static void assertBaseOrdersEquals(OrderDTO expected, OrderDTO actual) {
+    private static void assertBaseOrdersEquals(ApiOrderDTO expected, ApiOrderDTO actual) {
         assertEquals(expected.getType(), actual.getType());
         assertEquals(expected.getPrice(), actual.getPrice());
         assertEquals(expected.getQuantity(), actual.getQuantity());
         assertEquals(expected.getInstrument(), actual.getInstrument());
     }
 
-    private static void assertBaseOrdersEquals(OrderEntity expected, OrderDTO actual) {
+    private static void assertBaseOrdersEquals(OrderEntity expected, ApiOrderDTO actual) {
         assertEquals(expected.getType(), actual.getType());
         assertEquals(expected.getQuantity(), actual.getQuantity());
         assertEquals(expected.getInstrument(), actual.getInstrument());
         assertEquals(expected.getPrice().setScale(1, UP), actual.getPrice().setScale(1, UP));
     }
 
-    private void verifyDatabaseOrder(OrderDTO actual, UUID orderId) {
+    private void verifyDatabaseOrder(ApiOrderDTO actual, UUID orderId) {
         OrderEntity expected = retrieveMandatoryOrder(orderId);
 
         assertBaseOrdersEquals(expected, actual);
         assertEquals(expected.getId(), actual.getId());
     }
 
-    private void verifyGetOrderResponse(OrderDTO actual, UUID orderId) {
+    private void verifyGetOrderResponse(ApiOrderDTO actual, UUID orderId) {
         assertNotNull(actual);
         verifyDatabaseOrder(actual, orderId);
     }
 
-    private void verifyCreateOrderResponse(OrderDTO expected, ResponseEntity<CreateOrderResponseDTO> result) {
+    private void verifyCreateOrderResponse(ApiOrderDTO expected, ResponseEntity<ApiCreateOrderResponseDTO> result) {
         assertNotNull(result.getBody());
-        OrderDTO actual = result.getBody().getOrder();
+        ApiOrderDTO actual = result.getBody().getOrder();
 
         assertNotNull(actual);
         assertBaseOrdersEquals(expected, actual);
@@ -259,12 +268,12 @@ class OrdersIntegrationTest {
                         .price(BigDecimal.valueOf(EASY_RANDOM.nextDouble(1.0d, 100.0d))).build());
     }
 
-    private static OrderDTO newCreateOrderDTO() {
+    private static ApiOrderDTO newCreateOrderDTO() {
         return newCreateOrderDTO(x -> {
         });
     }
 
-    private static OrderDTO newCreateOrderDTO(Consumer<OrderDTOBuilder> modifier) {
+    private static ApiOrderDTO newCreateOrderDTO(Consumer<ApiOrderDTOBuilder> modifier) {
         var builder = builder()
                 .type(LIMIT)
                 .instrument(randomAlphabetic(15))
@@ -297,7 +306,7 @@ class OrdersIntegrationTest {
                                                 .errors(errors).build()))));
     }
 
-    private void verifyOrderValidationCall(BaseOrderDTO orderDTO) {
+    private void verifyOrderValidationCall(ApiBaseOrderDTO orderDTO) {
         wireMockServer.
                 verify(postRequestedFor(urlEqualTo("/orders/v1/validate"))
                         .withHeader(CONTENT_TYPE, equalTo(APPLICATION_JSON_VALUE))

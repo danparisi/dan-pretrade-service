@@ -1,16 +1,16 @@
 package com.danservice.pretrade.service;
 
-import com.danservice.pretrade.api.v1.OrderMapper;
-import com.danservice.pretrade.api.v1.dto.CreateOrderDTO;
-import com.danservice.pretrade.api.v1.dto.OrderDTO;
-import com.danservice.pretrade.persistency.model.OrderEntity;
-import com.danservice.pretrade.persistency.repository.OrderRepository;
+import com.danservice.pretrade.adapter.ApiOrderMapper;
+import com.danservice.pretrade.adapter.KafkaClientOrderMapper;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiCreateOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO;
+import com.danservice.pretrade.adapter.outbound.kafka.v1.KafkaProducer;
+import com.danservice.pretrade.adapter.repository.OrderRepository;
+import com.danservice.pretrade.model.OrderEntity;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -25,35 +25,35 @@ import static java.util.stream.Collectors.toSet;
 @Transactional
 @RequiredArgsConstructor
 public class OrdersService {
-    @Value("${dan.topic.client-order}")
-    private String clientOrdersTopic;
-    private final OrderMapper orderMapper;
+    private final KafkaProducer kafkaProducer;
+    private final ApiOrderMapper apiOrderMapper;
     private final OrderRepository orderRepository;
+    private final KafkaClientOrderMapper kafkaClientOrderMapper;
     private final ValidationService validationService;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public OrderDTO add(@NonNull @Valid CreateOrderDTO createOrderDTO) {
+    public ApiOrderDTO add(@NonNull @Valid ApiCreateOrderDTO createOrderDTO) {
         validationService.validateForCreate(createOrderDTO);
 
-        final OrderEntity storedOrderEntity = orderRepository.save(orderMapper.map(createOrderDTO));
-        final OrderDTO storedOrderDTO = orderMapper.map(storedOrderEntity);
+        final OrderEntity storedOrderEntity = orderRepository.save(apiOrderMapper.map(createOrderDTO));
+        final ApiOrderDTO storedOrderDTO = apiOrderMapper.map(storedOrderEntity);
 
-        kafkaTemplate.send(clientOrdersTopic, storedOrderDTO.getId().toString(), storedOrderDTO);
+        kafkaProducer.sendClientOrder(
+                kafkaClientOrderMapper.map(storedOrderDTO));
 
         return storedOrderDTO;
     }
 
-    public Optional<OrderDTO> find(@NonNull UUID orderId) {
+    public Optional<ApiOrderDTO> find(@NonNull UUID orderId) {
         return orderRepository
                 .findById(orderId)
-                .map(orderMapper::map);
+                .map(apiOrderMapper::map);
     }
 
-    public Collection<OrderDTO> findAll() {
+    public Collection<ApiOrderDTO> findAll() {
         return orderRepository
                 .findAll()
                 .stream()
-                .map(orderMapper::map)
+                .map(apiOrderMapper::map)
                 .collect(toSet());
     }
 
