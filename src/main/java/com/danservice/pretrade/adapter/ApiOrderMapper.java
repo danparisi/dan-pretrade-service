@@ -1,7 +1,7 @@
 package com.danservice.pretrade.adapter;
 
-import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiCreateOrderDTO;
-import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiCreateOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderDTO;
 import com.danservice.pretrade.model.OrderEntity;
 import org.mapstruct.Mapper;
 

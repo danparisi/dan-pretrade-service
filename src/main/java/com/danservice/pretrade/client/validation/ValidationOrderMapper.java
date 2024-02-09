@@ -1,6 +1,6 @@
 package com.danservice.pretrade.client.validation;
 
-import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiCreateOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiCreateOrderDTO;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")

@@ -1,4 +1,4 @@
-package com.danservice.pretrade.adapter.inbound.api.v1.dto;
+package com.danservice.pretrade.adapter.inbound.api.order.v1.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

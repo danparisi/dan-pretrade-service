@@ -1,10 +1,10 @@
 package com.danservice.pretrade;
 
-import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiBaseOrderDTO;
-import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiCreateOrderResponseDTO;
-import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO;
-import com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO.ApiOrderDTOBuilder;
-import com.danservice.pretrade.adapter.outbound.kafka.v1.dto.KafkaClientOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiBaseOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiCreateOrderResponseDTO;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderDTO.ApiOrderDTOBuilder;
+import com.danservice.pretrade.adapter.outbound.kafka.clientorder.v1.dto.KafkaClientOrderDTO;
 import com.danservice.pretrade.adapter.repository.OrderRepository;
 import com.danservice.pretrade.client.validation.OrderValidationResponseDTO;
 import com.danservice.pretrade.model.OrderEntity;
@@ -47,10 +47,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.danservice.pretrade.IntegrationTest.LoadBalancerTestConfiguration;
-import static com.danservice.pretrade.adapter.inbound.api.v1.OrdersController.BASE_ENDPOINT_ORDERS;
-import static com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiOrderDTO.builder;
-import static com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiResultType.ERROR;
-import static com.danservice.pretrade.adapter.inbound.api.v1.dto.ApiResultType.SUCCESS;
+import static com.danservice.pretrade.adapter.inbound.api.order.v1.OrdersController.BASE_ENDPOINT_ORDERS;
+import static com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderDTO.builder;
+import static com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiResultType.ERROR;
+import static com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiResultType.SUCCESS;
 import static com.danservice.pretrade.domain.OrderType.LIMIT;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static java.lang.String.format;

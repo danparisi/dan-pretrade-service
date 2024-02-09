@@ -1,4 +1,4 @@
-package com.danservice.pretrade.adapter.outbound.kafka.v1.dto;
+package com.danservice.pretrade.adapter.outbound.kafka.clientorder.v1.dto;
 
 import com.danservice.pretrade.domain.OrderType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

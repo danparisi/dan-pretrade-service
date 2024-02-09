@@ -1,6 +1,6 @@
-package com.danservice.pretrade.adapter.outbound.kafka.v1;
+package com.danservice.pretrade.adapter.outbound.kafka.clientorder.v1;
 
-import com.danservice.pretrade.adapter.outbound.kafka.v1.dto.KafkaClientOrderDTO;
+import com.danservice.pretrade.adapter.outbound.kafka.clientorder.v1.dto.KafkaClientOrderDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;

@@ -1,4 +1,4 @@
-package com.danservice.pretrade.adapter.inbound.api.v1.dto;
+package com.danservice.pretrade.adapter.inbound.api.order.v1.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
