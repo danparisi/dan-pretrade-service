@@ -40,6 +40,8 @@ public class OrdersService {
         kafkaProducer.sendClientOrder(
                 kafkaClientOrderMapper.map(storedOrderDTO));
 
+        log.info("Order [{}] created", storedOrderDTO.getId());
+
         return storedOrderDTO;
     }
 

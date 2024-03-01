@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -73,6 +74,7 @@ import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.HttpStatus.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.kafka.support.serializer.JsonDeserializer.TRUSTED_PACKAGES;
+import static org.springframework.kafka.support.serializer.JsonDeserializer.TYPE_MAPPINGS;
 import static org.springframework.kafka.test.utils.KafkaTestUtils.consumerProps;
 import static org.springframework.kafka.test.utils.KafkaTestUtils.getRecords;
 import static reactor.core.publisher.Flux.just;
@@ -92,6 +94,8 @@ class IntegrationTest {
     private WireMockServer wireMockServer;
     @Autowired
     private OrderRepository orderRepository;
+    @Autowired
+    private KafkaProperties kafkaProperties;
     @Autowired
     private TestRestTemplate testRestTemplate;
     @Autowired
@@ -202,12 +206,14 @@ class IntegrationTest {
 
     private List<ConsumerRecord<String, KafkaClientOrderDTO>> consumeFromKafkaTopic() {
         Map<String, Object> consumerProps = consumerProps("test-group", "true", embeddedKafkaBroker);
-        consumerProps.put(TRUSTED_PACKAGES, "com.danservice.*");
+        consumerProps.put(TRUSTED_PACKAGES, "*");
         consumerProps.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         consumerProps.put(VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        ConsumerFactory<String, KafkaClientOrderDTO> cf = new DefaultKafkaConsumerFactory<>(consumerProps);
-        org.apache.kafka.clients.consumer.Consumer<String, KafkaClientOrderDTO> consumer = cf.createConsumer();
+        consumerProps.put(TYPE_MAPPINGS, kafkaProperties.getProducer().getProperties().get(TYPE_MAPPINGS));
+
+        ConsumerFactory<String, KafkaClientOrderDTO> consumerFactory = new DefaultKafkaConsumerFactory<>(consumerProps);
+        org.apache.kafka.clients.consumer.Consumer<String, KafkaClientOrderDTO> consumer = consumerFactory.createConsumer();
 
         embeddedKafkaBroker
                 .consumeFromAnEmbeddedTopic(consumer, clientOrdersTopic);

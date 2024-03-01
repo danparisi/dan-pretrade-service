@@ -9,6 +9,3 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
-  kafka:
-    consumer:
-      auto-offset-reset: earliest
