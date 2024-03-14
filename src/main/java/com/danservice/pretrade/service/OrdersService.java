@@ -28,8 +28,8 @@ public class OrdersService {
     private final KafkaProducer kafkaProducer;
     private final ApiOrderMapper apiOrderMapper;
     private final OrderRepository orderRepository;
-    private final KafkaClientOrderMapper kafkaClientOrderMapper;
     private final ValidationService validationService;
+    private final KafkaClientOrderMapper kafkaClientOrderMapper;
 
     public ApiOrderDTO add(@NonNull @Valid ApiCreateOrderDTO createOrderDTO) {
         validationService.validateForCreate(createOrderDTO);

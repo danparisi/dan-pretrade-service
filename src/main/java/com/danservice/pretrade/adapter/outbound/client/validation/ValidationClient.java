@@ -1,4 +1,4 @@
-package com.danservice.pretrade.client.validation;
+package com.danservice.pretrade.adapter.outbound.client.validation;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;

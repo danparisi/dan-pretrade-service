@@ -1,4 +1,4 @@
-package com.danservice.pretrade.client.validation;
+package com.danservice.pretrade.adapter.outbound.client.validation;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;

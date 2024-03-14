@@ -4,9 +4,12 @@ import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiBaseOrderDTO;
 import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiCreateOrderResponseDTO;
 import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderDTO;
 import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderDTO.ApiOrderDTOBuilder;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderStatusResponseDTO;
+import com.danservice.pretrade.adapter.outbound.client.gfm.GetOrderStatusResponseDTO;
+import com.danservice.pretrade.adapter.outbound.client.validation.OrderValidationResponseDTO;
 import com.danservice.pretrade.adapter.outbound.kafka.clientorder.v1.dto.KafkaClientOrderDTO;
 import com.danservice.pretrade.adapter.repository.OrderRepository;
-import com.danservice.pretrade.client.validation.OrderValidationResponseDTO;
+import com.danservice.pretrade.domain.OrderStatus;
 import com.danservice.pretrade.model.OrderEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -52,6 +55,7 @@ import static com.danservice.pretrade.adapter.inbound.api.order.v1.OrdersControl
 import static com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderDTO.builder;
 import static com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiResultType.ERROR;
 import static com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiResultType.SUCCESS;
+import static com.danservice.pretrade.domain.OrderStatus.EXECUTED;
 import static com.danservice.pretrade.domain.OrderType.LIMIT;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static java.lang.String.format;
@@ -85,6 +89,7 @@ class IntegrationTest {
     private static final EasyRandom EASY_RANDOM = new EasyRandom();
     private static final String ENDPOINT_ALL_ORDERS = BASE_ENDPOINT_ORDERS;
     private static final String ENDPOINT_ORDER_ID = BASE_ENDPOINT_ORDERS + "/{orderId}";
+    private static final String ENDPOINT_ORDER_STATUS_ORDER_ID = BASE_ENDPOINT_ORDERS + "/{orderId}/status";
 
     @Value("${dan.topic.client-order}")
     private String clientOrdersTopic;
@@ -139,6 +144,21 @@ class IntegrationTest {
         assertBaseOrdersEquals(order1, orders.get(order1.getId()));
         assertBaseOrdersEquals(order2, orders.get(order2.getId()));
         assertBaseOrdersEquals(order3, orders.get(order3.getId()));
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldGetOrderStatus() {
+        UUID orderId = randomUUID();
+        stubOrderStatusCall(orderId, EXECUTED);
+
+        ResponseEntity<ApiOrderStatusResponseDTO> response = testRestTemplate
+                .getForEntity(ENDPOINT_ORDER_STATUS_ORDER_ID, ApiOrderStatusResponseDTO.class, orderId);
+
+        ApiOrderStatusResponseDTO actual = response.getBody();
+        assertNotNull(actual);
+        assertEquals(OK, response.getStatusCode());
+        assertEquals(actual.getStatus(), EXECUTED);
     }
 
     @Test
@@ -310,6 +330,19 @@ class IntegrationTest {
                                         .writeValueAsString(OrderValidationResponseDTO.builder()
                                                 .valid(valid)
                                                 .errors(errors).build()))));
+    }
+
+    @SneakyThrows
+    private void stubOrderStatusCall(UUID orderId, OrderStatus orderStatus) {
+        wireMockServer
+                .stubFor(get(urlPathTemplate("/orders/v1/{orderId}/status"))
+                        .withPathParam("orderId", equalTo(orderId.toString()))
+                        .willReturn(aResponse()
+                                .withStatus(OK.value())
+                                .withHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE)
+                                .withBody(objectMapper
+                                        .writeValueAsString(GetOrderStatusResponseDTO.builder()
+                                                .currentStatus(orderStatus).build()))));
     }
 
     private void verifyOrderValidationCall(ApiBaseOrderDTO orderDTO) {

@@ -1,10 +1,8 @@
 package com.danservice.pretrade.adapter.inbound.api.order.v1;
 
-import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiBaseOrderResponseDTO;
-import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiCreateOrderDTO;
-import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiCreateOrderResponseDTO;
-import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.ApiOrderDTO;
+import com.danservice.pretrade.adapter.inbound.api.order.v1.dto.*;
 import com.danservice.pretrade.exception.OrderValidationException;
+import com.danservice.pretrade.service.OrderStatusService;
 import com.danservice.pretrade.service.OrdersService;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
@@ -32,6 +30,7 @@ public class OrdersController {
     public static final String BASE_ENDPOINT_ORDERS = "/orders/v1";
 
     private final OrdersService ordersService;
+    private final OrderStatusService orderStatusService;
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiBaseOrderResponseDTO> exceptionHandler(ValidationException exception) {
@@ -45,6 +44,16 @@ public class OrdersController {
         return ResponseEntity
                 .badRequest()
                 .body(getExceptionBody(exception.getErrors()));
+    }
+
+    @GetMapping("/{orderId}/status")
+    public ResponseEntity<ApiOrderStatusResponseDTO> getStatus(@NotNull @PathVariable UUID orderId) {
+        var orderStatus = orderStatusService.getOrderStatus(orderId);
+
+        log.info("Returning status [{}] for order order [{}]", orderStatus, orderId);
+
+        return ok(ApiOrderStatusResponseDTO.builder()
+                .status(orderStatus).build());
     }
 
     @GetMapping("/{orderId}")
