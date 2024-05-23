@@ -20,6 +20,11 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.type.mapping: KafkaClientOrderDTO.v1:com.danservice.pretrade.adapter.outbound.kafka.clientorder.v1.dto.KafkaClientOrderDTO
+  cloud:
+    loadbalancer:
+      eager-load:
+        # feign, load balanced, client list required for working with AOT / native images
+        clients: dan-gfm-service, dan-validation-service
 
 dan:
   topic:

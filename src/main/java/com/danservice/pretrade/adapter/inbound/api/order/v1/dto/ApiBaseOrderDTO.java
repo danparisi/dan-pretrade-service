@@ -4,11 +4,13 @@ import com.danservice.pretrade.domain.OrderType;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
 @Data
+@ToString
 @RequiredArgsConstructor
 @SuperBuilder(toBuilder = true)
 public class ApiBaseOrderDTO {

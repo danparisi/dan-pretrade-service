@@ -58,7 +58,7 @@ public class OrdersController {
 
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiOrderDTO> get(@NotNull @PathVariable UUID orderId) {
-        log.info("Returning order [{}]", orderId);
+        log.info("Returning order [{}] or no content", orderId);
 
         return ordersService
                 .find(orderId)

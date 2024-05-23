@@ -2,10 +2,13 @@ package com.danservice.pretrade.adapter.outbound.kafka.clientorder.v1;
 
 import com.danservice.pretrade.adapter.outbound.kafka.clientorder.v1.dto.KafkaClientOrderDTO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class KafkaProducer {
@@ -13,9 +16,10 @@ public class KafkaProducer {
     private String clientOrdersTopic;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public void sendClientOrder(KafkaClientOrderDTO orderDTO) {
-        String key = orderDTO.getId().toString();
-        kafkaTemplate.send(clientOrdersTopic, key, orderDTO);
+    public void sendClientOrder(KafkaClientOrderDTO kafkaClientOrderDTO) {
+        String key = kafkaClientOrderDTO.getId().toString();
+        log.info("Sending client order [{}] against [{}] topic", kafkaClientOrderDTO, clientOrdersTopic);
 
+        kafkaTemplate.send(clientOrdersTopic, key, kafkaClientOrderDTO);
     }
 }
